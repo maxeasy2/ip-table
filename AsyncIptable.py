@@ -58,7 +58,7 @@ for page in range(firstPage, lastPage+1):
     print('page : ' + str(page)+'/'+str(lastPage) +' ::: start')
     asyncio.run(process_async(page, rowCnt))
     for key in responseList.keys():
-        param = {'check': key, 'seq': responseList[key]}
+        param = {'seq': key, 'check': responseList[key]}
         #print(param)
         RunSQL.save(param, 'update_iptable.sql')
     responseList = {}
