@@ -1,0 +1,1 @@
+insert into ip_table (ip) values (:ip)
