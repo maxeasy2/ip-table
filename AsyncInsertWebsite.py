@@ -61,7 +61,7 @@ for page in range(firstPage, lastPage+1):
     asyncio.run(process_async(page, rowCnt))
     for key in responseTitleList.keys():
         param = {'seq': key, 'title': responseTitleList[key], 'html': responseBodyList[key]}
-        print(param)
+        #print(param)
         RunSQL.save(param, 'insert_access_website.sql')
     responseTitleList = {}
     responseBodyList = {}
