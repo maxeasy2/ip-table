@@ -5,31 +5,33 @@ import asyncio
 import aiohttp
 import os
 import sys
+from bs4 import BeautifulSoup
 
 rootPath = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-responseList = {}
+responseTitleList = {}
+responseBodyList = {}
 async def async_http_call(row):
     try:
         #print('[ip] ' + row['ip'])
         url = 'http://' + row['ip']
+        #url = 'https://beomi.github.io/2017/01/20/HowToMakeWebCrawler/'
         async with aiohttp.ClientSession() as session:
             async with session.get(url, timeout=1) as res:
                 #print('req :: ' + str(row['seq']) + ' status : ' + str(res.status))
-                if res.status >= 200 and res.status <= 399:
-                    responseList[row['seq']] = 'Y'
-                else:
-                    responseList[row['seq']] = 'E'
-
+                if res.status >= 200 :
+                    html = await res.text()
+                    soup = BeautifulSoup(html, 'html.parser')
+                    title = soup.title.text
+                    responseTitleList[row['seq']] = title
+                    responseBodyList[row['seq']] = html
     except Exception as e:
-        #print('errMsg :: ' + str(e))
-        responseList[row['seq']] = 'N'
+        print('#')
+
 
 async def process_async(page, rowCnt):
     json = {'rowcnt': rowCnt, 'offset': (page-1)*rowCnt}
-    rows = RunSQL.selectList(json, 'getIptable.sql')
-
+    rows = RunSQL.selectList(json, 'getAccessIptable.sql')
     tasks = [async_http_call(row) for row in rows]
-
     await asyncio.wait(tasks)
 
 def sendSlack(cnt, key):
@@ -37,7 +39,7 @@ def sendSlack(cnt, key):
     data = {
         'channel': '#notification',
         'username': 'Notifier',
-        'text': str(cnt)+'건 수집완료',
+        'text': str(cnt)+'건 타이틀 수집완료',
         'icon_emoji': 'sunglasses'
     }
     response = requests.post(slackUrl, json=data)
@@ -57,11 +59,12 @@ if firstPage == None or lastPage == None:
 for page in range(firstPage, lastPage+1):
     print('page : ' + str(page)+'/'+str(lastPage) +' ::: start')
     asyncio.run(process_async(page, rowCnt))
-    for key in responseList.keys():
-        param = {'seq': key, 'check': responseList[key]}
-        #print(param)
-        RunSQL.save(param, 'update_iptable.sql')
-    responseList = {}
+    for key in responseTitleList.keys():
+        param = {'seq': key, 'title': responseTitleList[key], 'html': responseBodyList[key]}
+        print(param)
+        RunSQL.save(param, 'insert_access_website.sql')
+    responseTitleList = {}
+    responseBodyList = {}
     print('page : ' + str(page)+'/'+str(lastPage) +' ::: end')
     sleep(1)
 

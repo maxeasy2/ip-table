@@ -1,0 +1,1 @@
+insert into access_website (seq,title,body) values (:seq,:title,:html)
